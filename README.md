@@ -1,5 +1,5 @@
 <h1 align="center">
-  Sanal OLTC ⚡
+  Sanal OLTC 
 </h1>
 
 <p align="center">
@@ -15,7 +15,7 @@
 
 ---
 
-## 📖 Proje Hakkında
+##  Proje Hakkında
 
 **Sanal OLTC**, bir güç transformatörünün sekonder gerilimini otomatik kademe değiştirici (OLTC) kullanarak regüle etme sürecini modelleyen, tamamen yazılımsal ve eğitsel bir simülasyon projesidir.
 
@@ -25,7 +25,7 @@ Gerçek donanımların getirdiği riskleri ve yüksek maliyetleri ortadan kaldı
 
 ---
 
-## ✨ Temel Özellikler
+## Temel Özellikler
 
 - **Analitik Matematiksel Model:** Elektromanyetik geçici rejim (EMT) çözücülerine veya ağır iterasyonlara gerek kalmadan, Per-Unit (pu) sistemi ve tam kapalı form kuadratik denklemlerle (RMS ve quasi-steady-state) %100 kararlı hesaplama.
 - **Akıllı Denetleyici Algoritması:** Gerçek bir röle mantığında çalışan; Ölü Bant (Deadband), Zaman Gecikmesi (Time Delay) ve Minimum Bekleme Süresi parametreleriyle donatılmış kontrolcü.
@@ -36,7 +36,7 @@ Gerçek donanımların getirdiği riskleri ve yüksek maliyetleri ortadan kaldı
 
 ---
 
-## 🛠️ Kurulum
+##  Kurulum
 
 Proje Python 3.12 (veya üzeri) gerektirmektedir.
 
@@ -64,7 +64,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🚀 Kullanım
+##  Kullanım
 
 Projeyi çalıştırmak için terminalde şu komutu girin:
 
@@ -81,7 +81,7 @@ streamlit run app.py
 
 ---
 
-## 🧪 Testler
+##  Testler
 
 Uygulamanın matematiksel altyapısı ve denetleyici mantığı `pytest` kullanılarak birim testleriyle güvence altına alınmıştır. Testleri çalıştırmak için:
 
@@ -91,7 +91,7 @@ pytest -v
 
 ---
 
-## 🧠 Nasıl Çalışıyor? (Teorik Arka Plan)
+##  Nasıl Çalışıyor? (Teorik Arka Plan)
 
 1. **Per-Unit Sistemi:** Bütün değerler (gerilim, empedans, güç) transformatörün nominal değerlerine bölünerek (1.0 pu = %100) standardize edilir.
 2. **Gerilim Düşümü:** Yükün çektiği aktif ($P$) ve reaktif ($Q$) güç ile transformatörün iç direnci ($R$) ve reaktansı ($X$) kullanılarak çıkış gerilimi analitik formülle hesaplanır:
@@ -102,6 +102,6 @@ pytest -v
 
 ---
 
-## 📜 Lisans
+##  Lisans
 
 Bu proje **MIT Lisansı** altında lisanslanmıştır. Daha fazla bilgi için `LICENSE` dosyasına bakabilirsiniz. Herhangi bir ticari, akademik veya kişisel projede özgürce kullanabilirsiniz.
