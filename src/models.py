@@ -27,7 +27,7 @@ class TransformerModel:
         is_inductive: bool = True
     ) -> float:
         v, _ = self.calculate_parallel_secondary_voltage(
-            vin_pu, tap_position, tap_position, load_pu / 2.0 if load_pu > 0 else 0, power_factor, is_inductive, is_single=True
+            vin_pu, tap_position, tap_position, load_pu, power_factor, is_inductive, is_single=True
         )
         return v
 
