@@ -12,9 +12,9 @@ def calculate_kpis(df: pd.DataFrame, target_pu: float, deadband_percent: float):
     if uncontrolled_mae > 0:
         improvement_percent = ((uncontrolled_mae - controlled_mae) / uncontrolled_mae) * 100.0
         
-    # Calculate tap changes correctly
-    tap_diff = df["Kademe Konumu"].diff().fillna(0)
-    total_tap_changes = (tap_diff != 0).sum()
+    tap_diff1 = df["Kademe 1"].diff().fillna(0)
+    tap_diff2 = df["Kademe 2"].diff().fillna(0)
+    total_tap_changes = (tap_diff1 != 0).sum() + (tap_diff2 != 0).sum()
     
     dt = df["Zaman (s)"].diff().mean()
     if np.isnan(dt): dt = 0
@@ -25,6 +25,7 @@ def calculate_kpis(df: pd.DataFrame, target_pu: float, deadband_percent: float):
     
     min_v_out = df["Kontrollü Çıkış (pu)"].min()
     max_v_out = df["Kontrollü Çıkış (pu)"].max()
+    max_i_circ = df["Sirkülasyon Akımı (pu)"].max() if "Sirkülasyon Akımı (pu)" in df.columns else 0.0
     
     return {
         "uncontrolled_max_dev": float(uncontrolled_max_dev),
@@ -35,5 +36,6 @@ def calculate_kpis(df: pd.DataFrame, target_pu: float, deadband_percent: float):
         "total_tap_changes": int(total_tap_changes),
         "time_out_of_deadband": float(time_out_of_deadband),
         "min_v_out": float(min_v_out),
-        "max_v_out": float(max_v_out)
+        "max_v_out": float(max_v_out),
+        "max_i_circ": float(max_i_circ)
     }

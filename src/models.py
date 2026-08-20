@@ -26,43 +26,56 @@ class TransformerModel:
         power_factor: float,
         is_inductive: bool = True
     ) -> float:
-        """
-        Calculates the secondary voltage in per-unit using an exact quadratic solution
-        for the voltage drop across the transformer's equivalent impedance.
-        """
-        if vin_pu <= 0:
-            return 0.0
+        v, _ = self.calculate_parallel_secondary_voltage(
+            vin_pu, tap_position, tap_position, load_pu / 2.0 if load_pu > 0 else 0, power_factor, is_inductive, is_single=True
+        )
+        return v
 
-        # Tap multiplier (positive tap increases secondary voltage)
-        tap_multiplier = 1.0 + tap_position * self.params.tap_step_pu
-        vs_pu = vin_pu * tap_multiplier
+    def calculate_parallel_secondary_voltage(
+        self,
+        vin_pu: float,
+        tap_position_1: int,
+        tap_position_2: int,
+        load_pu: float,
+        power_factor: float,
+        is_inductive: bool = True,
+        is_single: bool = False
+    ) -> tuple[float, float]:
+        if vin_pu <= 0:
+            return 0.0, 0.0
+
+        tap_mult_1 = 1.0 + tap_position_1 * self.params.tap_step_pu
+        tap_mult_2 = 1.0 + tap_position_2 * self.params.tap_step_pu
+        v1 = vin_pu * tap_mult_1
+        v2 = vin_pu * tap_mult_2
+        
+        v_s_eq = (v1 + v2) / 2.0
+        
+        z_mag = math.sqrt(self.params.r_pu**2 + self.params.x_pu**2)
+        i_circ = abs(v1 - v2) / (2.0 * z_mag) if not is_single else 0.0
         
         if load_pu <= 0:
-            return vs_pu
+            return v_s_eq, i_circ
             
-        # P and Q in per-unit
         p_pu = load_pu * power_factor
         q_pu = load_pu * math.sqrt(1.0 - power_factor**2)
         if not is_inductive:
-            q_pu = -q_pu # Capacitive load provides reactive power
+            q_pu = -q_pu
             
-        r = self.params.r_pu
-        x = self.params.x_pu
+        # If single, impedance is R, X. If parallel, it's R/2, X/2
+        r_eq = self.params.r_pu if is_single else self.params.r_pu / 2.0
+        x_eq = self.params.x_pu if is_single else self.params.x_pu / 2.0
         
-        # Solving the exact quadratic equation for v = V_out_pu^2
-        # v^2 + (2(PR + QX) - Vs^2)v + (P^2 + Q^2)(R^2 + X^2) = 0
         a = 1.0
-        b = 2.0 * (p_pu * r + q_pu * x) - vs_pu**2
-        c = (p_pu**2 + q_pu**2) * (r**2 + x**2)
+        b = 2.0 * (p_pu * r_eq + q_pu * x_eq) - v_s_eq**2
+        c = (p_pu**2 + q_pu**2) * (r_eq**2 + x_eq**2)
         
         discriminant = b**2 - 4 * a * c
-        
         if discriminant < 0:
-            return 0.0
+            return 0.0, i_circ
             
         v_squared = (-b + math.sqrt(discriminant)) / 2.0
-        
         if v_squared <= 0:
-            return 0.0
+            return 0.0, i_circ
             
-        return math.sqrt(v_squared)
+        return math.sqrt(v_squared), i_circ

@@ -52,6 +52,12 @@ def generate_load_scenario(
         l[mask] = base_pu + 0.2 * (time_array[mask] - ramp_start) / (ramp_end - ramp_start)
         l[time_array > ramp_end] = base_pu + 0.2
         return l
+    elif scenario_type == "TEİAŞ Günlük (Ölçekli)":
+        t_normalized = time_array / time_array[-1] * 24.0
+        xp = [0, 6, 9, 17, 20, 24]
+        yp = [0.4, 0.5, 0.85, 0.85, 1.1, 0.4]
+        l = np.interp(t_normalized, xp, yp) * (base_pu / 0.85)
+        return l
     elif scenario_type == "Rastgele":
         np.random.seed(seed + 1)
         noise = np.random.normal(0, 0.05, len(time_array))

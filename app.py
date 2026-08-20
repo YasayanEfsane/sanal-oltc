@@ -32,10 +32,13 @@ min_time_taps = st.sidebar.number_input("Minimum Bekleme Süresi (s)", value=1.0
 
 st.sidebar.header("Senaryo Ayarları")
 v_scenario = st.sidebar.selectbox("Giriş Gerilimi Senaryosu", ["Sabit", "Basamak", "Rampa", "Sinüzoidal", "Rastgele"], index=1)
-l_scenario = st.sidebar.selectbox("Yük Senaryosu", ["Sabit", "Basamak", "Rampa", "Rastgele"], index=0)
+l_scenario = st.sidebar.selectbox("Yük Senaryosu", ["Sabit", "Basamak", "Rampa", "TEİAŞ Günlük (Ölçekli)", "Rastgele"], index=0)
 pf = st.sidebar.number_input("Güç Faktörü", value=0.90, min_value=0.0, max_value=1.0)
 is_ind_str = st.sidebar.radio("Yük Tipi", ["Endüktif", "Kapasitif"])
 is_inductive = (is_ind_str == "Endüktif")
+
+st.sidebar.header("İşletme Modu")
+parallel_mode = st.sidebar.selectbox("Çalışma Modu", ["Tek Trafo", "Bağımsız Paralel", "Lider-Takipçi Paralel"], index=0)
 
 st.sidebar.header("Simülasyon Ayarları")
 sim_time = st.sidebar.number_input("Simülasyon Süresi (s)", value=60.0)
@@ -62,7 +65,7 @@ if run_button:
     c_params = ControllerParams(deadband_percent=deadband, delay_time_s=delay_time, min_time_between_taps_s=min_time_taps)
     
     df_results, df_events, events = run_simulation(
-        t_params, c_params, sim_time, dt_s, v_scenario, l_scenario, pf, is_inductive
+        t_params, c_params, sim_time, dt_s, v_scenario, l_scenario, pf, is_inductive, parallel_mode
     )
     
     kpis = calculate_kpis(df_results, target_v, deadband)
@@ -73,18 +76,24 @@ if run_button:
     st.session_state.params_dict = {
         "transformer": t_params.__dict__,
         "controller": c_params.__dict__,
-        "scenario": {"v_scenario": v_scenario, "l_scenario": l_scenario, "pf": pf, "is_inductive": is_inductive}
+        "scenario": {"v_scenario": v_scenario, "l_scenario": l_scenario, "pf": pf, "is_inductive": is_inductive, "parallel_mode": parallel_mode}
     }
 
 if st.session_state.df_results is not None:
     df = st.session_state.df_results
     kpis = st.session_state.kpis
+    p_mode = st.session_state.params_dict["scenario"]["parallel_mode"]
     
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["Simülasyon", "Sonuçların Karşılaştırılması", "Olay Günlüğü", "Teorik Açıklama", "Proje Hakkında"])
     
     with tab1:
         st.subheader("Performans Ölçütleri (KPI)")
-        c1, c2, c3, c4 = st.columns(4)
+        if p_mode == "Tek Trafo":
+            c1, c2, c3, c4 = st.columns(4)
+        else:
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c5.metric("Maks. Sirkülasyon Akımı", f"{kpis['max_i_circ']:.3f} pu")
+            
         c1.metric("Regülasyon İyileşmesi", f"% {kpis['improvement_percent']:.1f}")
         c2.metric("Toplam Kademe Hareketi", str(kpis['total_tap_changes']))
         c3.metric("Ölü Bant Dışında Süre", f"{kpis['time_out_of_deadband']:.1f} s")
@@ -118,9 +127,17 @@ if st.session_state.df_results is not None:
             fig4.update_layout(title="Kontrollü Gerilim Hatası", xaxis_title="Zaman (s)", yaxis_title="Hata (pu)")
             st.plotly_chart(fig4, use_container_width=True)
             
+            if p_mode != "Tek Trafo":
+                fig6 = go.Figure()
+                fig6.add_trace(go.Scatter(x=df["Zaman (s)"], y=df["Sirkülasyon Akımı (pu)"], name="Sirkülasyon Akımı", line=dict(color="orange"), fill="tozeroy"))
+                fig6.update_layout(title="Trafolar Arası Sirkülasyon Akımı", xaxis_title="Zaman (s)", yaxis_title="Akım (pu)")
+                st.plotly_chart(fig6, use_container_width=True)
+            
         with c_chart2:
             fig3 = go.Figure()
-            fig3.add_trace(go.Scatter(x=df["Zaman (s)"], y=df["Kademe Konumu"], name="Kademe", line_shape="hv"))
+            fig3.add_trace(go.Scatter(x=df["Zaman (s)"], y=df["Kademe 1"], name="Kademe (Trafo 1)", line_shape="hv", line=dict(width=3)))
+            if p_mode != "Tek Trafo":
+                fig3.add_trace(go.Scatter(x=df["Zaman (s)"], y=df["Kademe 2"], name="Kademe (Trafo 2)", line_shape="hv", line=dict(dash="dot", width=3)))
             fig3.update_layout(title="Kademe Konumu (Basamak Grafiği)", xaxis_title="Zaman (s)", yaxis_title="Konum")
             st.plotly_chart(fig3, use_container_width=True)
             
@@ -164,15 +181,11 @@ if st.session_state.df_results is not None:
         
         **Per-Unit (pu) Sistemi:** Elektrik güç sistemlerinde farklı gerilim seviyelerindeki ekipmanları ortak bir tabanda analiz edebilmek için büyüklüklerin nominal değerlerine bölünmesiyle elde edilen boyutsuz birim sistemidir (1.0 pu = %100).
         
-        **Gerilim Regülasyonu:** Çıkış geriliminin, giriş gerilimindeki ve yükteki değişimlere rağmen hedeflenen seviyede tutulabilmesi yeteneğidir.
+        **Paralel Transformatörler ve Sirkülasyon Akımı:** İki veya daha fazla transformatör paralel bağlandığında, kademe konumları farklı olursa aralarında bir gerilim farkı oluşur. Bu fark, şebekeye veya yüke akmak yerine iki trafo arasında dönüp duran ve ısınmaya sebep olan bir "sirkülasyon akımı" (circulating current) yaratır. Master-Follower (Lider-Takipçi) kontrol modu, kademeleri senkronize ederek bunu önler. Bağımsız kontrol modunda ise tepki sürelerindeki ufak farklar bile bu akımın oluşmasına yol açar.
         
         **Ölü Bant (Deadband):** Çıkış geriliminin etrafında tanımlanan tolerans sınırıdır (örn. ±%1.5). Gerilim bu bant içindeyken denetleyici hiçbir düzeltme yapmaz. Bu, sürekli ve gereksiz kademe değişimini (chattering) önler.
         
         **Zaman Gecikmesi:** Gerilim ölü bant dışına çıktığında hemen tepki verilmez. Anlık dalgalanmaların kademe değişimine yol açmaması için beklenilen süredir.
-        
-        **Kontrolsüz Salınımı Önleme:** Zaman gecikmesi, minimum bekleme süresi ve ölü bant parametrelerinin üçü birlikte sistemin kararlı çalışmasını sağlar ve mekanik aşınmayı en aza indirir.
-        
-        **Model Varsayımları:** Model, gerçek bir EMT (Elektromanyetik Geçici Rejim) simulasyonu yapmaz. RMS ve quasi-steady-state yaklaşımıyla çalışır. Gerilim düşümü, empedans (R+jX) ve yük güçleri üzerinden analitik formülle çözülmüştür.
         """)
         
     with tab5:
