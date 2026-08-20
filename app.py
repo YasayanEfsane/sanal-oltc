@@ -140,17 +140,17 @@ with tab2:
     csv_results = df.to_csv(index=False).encode('utf-8')
     st.download_button("Sonuçları CSV İndir", data=csv_results, file_name="simulasyon_sonuclari.csv", mime="text/csv")
     
-    json_params = json.dumps(st.session_state.params_dict, indent=4).encode('utf-8')
+    json_params = json.dumps(params_dict, indent=4).encode('utf-8')
     st.download_button("Parametreleri JSON İndir", data=json_params, file_name="parametreler.json", mime="application/json")
     
-    html_report = generate_html_report(st.session_state.params_dict, kpis).encode('utf-8')
+    html_report = generate_html_report(params_dict, kpis).encode('utf-8')
     st.download_button("Raporu HTML İndir", data=html_report, file_name="sanal_oltc_rapor.html", mime="text/html")
 
 with tab3:
     st.subheader("Kademe Değişimi Olay Günlüğü")
-    if not st.session_state.df_events.empty:
-        st.dataframe(st.session_state.df_events, use_container_width=True)
-        csv_events = st.session_state.df_events.to_csv(index=False).encode('utf-8')
+    if not df_events.empty:
+        st.dataframe(df_events, use_container_width=True)
+        csv_events = df_events.to_csv(index=False).encode('utf-8')
         st.download_button("Olay Günlüğünü CSV İndir", data=csv_events, file_name="olay_gunlugu.csv", mime="text/csv")
     else:
         st.info("Simülasyon boyunca herhangi bir kademe hareketi gerçekleşmedi.")
