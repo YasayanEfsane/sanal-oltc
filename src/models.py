@@ -22,12 +22,11 @@ class TransformerModel:
         self,
         vin_pu: float,
         tap_position: int,
-        load_pu: float,
-        power_factor: float,
-        is_inductive: bool = True
+        p_pu: float,
+        q_pu: float
     ) -> float:
         v, _ = self.calculate_parallel_secondary_voltage(
-            vin_pu, tap_position, tap_position, load_pu, power_factor, is_inductive, is_single=True
+            vin_pu, tap_position, tap_position, p_pu, q_pu, is_single=True
         )
         return v
 
@@ -36,9 +35,8 @@ class TransformerModel:
         vin_pu: float,
         tap_position_1: int,
         tap_position_2: int,
-        load_pu: float,
-        power_factor: float,
-        is_inductive: bool = True,
+        p_pu: float,
+        q_pu: float,
         is_single: bool = False
     ) -> tuple[float, float]:
         if vin_pu <= 0:
@@ -54,13 +52,8 @@ class TransformerModel:
         z_mag = math.sqrt(self.params.r_pu**2 + self.params.x_pu**2)
         i_circ = abs(v1 - v2) / (2.0 * z_mag) if not is_single else 0.0
         
-        if load_pu <= 0:
+        if p_pu == 0 and q_pu == 0:
             return v_s_eq, i_circ
-            
-        p_pu = load_pu * power_factor
-        q_pu = load_pu * math.sqrt(1.0 - power_factor**2)
-        if not is_inductive:
-            q_pu = -q_pu
             
         # If single, impedance is R, X. If parallel, it's R/2, X/2
         r_eq = self.params.r_pu if is_single else self.params.r_pu / 2.0

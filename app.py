@@ -32,10 +32,14 @@ min_time_taps = st.sidebar.number_input("Minimum Bekleme Süresi (s)", value=1.0
 
 st.sidebar.header("Senaryo Ayarları")
 v_scenario = st.sidebar.selectbox("Giriş Gerilimi Senaryosu", ["Sabit", "Basamak", "Rampa", "Sinüzoidal", "Rastgele"], index=1)
-l_scenario = st.sidebar.selectbox("Yük Senaryosu", ["Sabit", "Basamak", "Rampa", "TEİAŞ Günlük (Ölçekli)", "Rastgele"], index=0)
+l_scenario = st.sidebar.selectbox("Yük Senaryosu", ["Sabit", "Basamak", "Rampa", "TEİAŞ Günlük (Ölçekli)", "Rastgele"], index=3)
 pf = st.sidebar.number_input("Güç Faktörü", value=0.90, min_value=0.0, max_value=1.0)
 is_ind_str = st.sidebar.radio("Yük Tipi", ["Endüktif", "Kapasitif"])
 is_inductive = (is_ind_str == "Endüktif")
+
+st.sidebar.header("🌞 Güneş Enerjisi (GES) Ayarları")
+solar_scenario = st.sidebar.selectbox("GES Üretim Profili", ["Yok", "Bulutsuz Yaz Günü", "Parçalı Bulutlu"], index=1)
+solar_peak = st.sidebar.number_input("GES Kurulu Gücü (pu)", value=0.8, min_value=0.0, max_value=2.0, step=0.1)
 
 st.sidebar.header("İşletme Modu")
 parallel_mode = st.sidebar.selectbox("Çalışma Modu", ["Tek Trafo", "Bağımsız Paralel", "Lider-Takipçi Paralel"], index=0)
@@ -52,19 +56,19 @@ t_params = TransformerParams(
 c_params = ControllerParams(deadband_percent=deadband, delay_time_s=delay_time, min_time_between_taps_s=min_time_taps)
 
 df_results, df_events, events = run_simulation(
-    t_params, c_params, sim_time, dt_s, v_scenario, l_scenario, pf, is_inductive, parallel_mode
+    t_params, c_params, sim_time, dt_s, v_scenario, l_scenario, solar_scenario, solar_peak, pf, is_inductive, parallel_mode
 )
 
 kpis = calculate_kpis(df_results, target_v, deadband)
 params_dict = {
     "transformer": t_params.__dict__,
     "controller": c_params.__dict__,
-    "scenario": {"v_scenario": v_scenario, "l_scenario": l_scenario, "pf": pf, "is_inductive": is_inductive, "parallel_mode": parallel_mode}
+    "scenario": {"v_scenario": v_scenario, "l_scenario": l_scenario, "solar_scenario": solar_scenario, "pf": pf, "is_inductive": is_inductive, "parallel_mode": parallel_mode}
 }
 
 df = df_results
 p_mode = parallel_mode
-    
+
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Simülasyon", "Sonuçların Karşılaştırılması", "Olay Günlüğü", "Teorik Açıklama", "Proje Hakkında"])
 
 with tab1:
@@ -122,10 +126,12 @@ with tab1:
         fig3.update_layout(title="Kademe Konumu (Basamak Grafiği)", xaxis_title="Zaman (s)", yaxis_title="Konum")
         st.plotly_chart(fig3, use_container_width=True)
         
-        fig5 = go.Figure()
-        fig5.add_trace(go.Scatter(x=df["Zaman (s)"], y=df["Yük (pu)"], name="Yük", line_shape="hv"))
-        fig5.update_layout(title="Yük Profili", xaxis_title="Zaman (s)", yaxis_title="Yük (pu)")
-        st.plotly_chart(fig5, use_container_width=True)
+        fig7 = go.Figure()
+        fig7.add_trace(go.Scatter(x=df["Zaman (s)"], y=df["Brüt Yük (pu)"], name="Brüt Tüketim", line=dict(color="black", dash="dot")))
+        fig7.add_trace(go.Scatter(x=df["Zaman (s)"], y=df["GES Üretimi (pu)"], name="GES Üretimi", fill="tozeroy", line=dict(color="gold")))
+        fig7.add_trace(go.Scatter(x=df["Zaman (s)"], y=df["Net Yük (pu)"], name="Şebekeden Çekilen (Net)", line=dict(color="purple", width=3)))
+        fig7.update_layout(title="Yük ve GES Üretim Dengesi", xaxis_title="Zaman (s)", yaxis_title="Güç (pu)")
+        st.plotly_chart(fig7, use_container_width=True)
 
 with tab2:
     st.subheader("İstatistiksel Karşılaştırma")
@@ -160,7 +166,7 @@ with tab4:
     st.markdown("""
     **Transformatör Dönüş Oranı & Kademe Değiştirme:** Transformatörün primer ve sekonder sargı sayılarının oranı, gerilim dönüştürme oranını belirler. Kademe (tap) değiştirici, sargı sayısını mekanik/elektriksel olarak değiştirerek dönüş oranını ayarlar. Pozitif kademe, sekonder gerilimini yükseltir.
     
-    **Per-Unit (pu) Sistemi:** Elektrik güç sistemlerinde farklı gerilim seviyelerindeki ekipmanları ortak bir tabanda analiz edebilmek için büyüklüklerin nominal değerlerine bölünmesiyle elde edilen boyutsuz birim sistemidir (1.0 pu = %100).
+    **Güneş Enerjisi Santrali (GES) ve Ters Güç Akışı (Reverse Power Flow):** Geleneksel şebekelerde güç daima trafodan yüklere doğru akar (gerilim düşer). Ancak sisteme dağıtık üretim (GES) eklendiğinde, öğle saatlerinde üretim tüketimi aşabilir. Bu durumda güç, şebekeye geri basılır (Ters Güç Akışı) ve gerilim *yükselmeye* başlar. OLTC, bu yükselmeyi önlemek için kademeyi düşürmek zorunda kalır. Klasik röleler bunu yönetmekte zorlanırken, modern çift-yönlü akış algılayan akıllı denetleyiciler (Smart Grid) bu simülasyondaki gibi hatasız çalışır.
     
     **Paralel Transformatörler ve Sirkülasyon Akımı:** İki veya daha fazla transformatör paralel bağlandığında, kademe konumları farklı olursa aralarında bir gerilim farkı oluşur. Bu fark, şebekeye veya yüke akmak yerine iki trafo arasında dönüp duran ve ısınmaya sebep olan bir "sirkülasyon akımı" (circulating current) yaratır. Master-Follower (Lider-Takipçi) kontrol modu, kademeleri senkronize ederek bunu önler. Bağımsız kontrol modunda ise tepki sürelerindeki ufak farklar bile bu akımın oluşmasına yol açar.
     
@@ -177,7 +183,7 @@ with tab5:
     Bu uygulama, tamamen bilgisayar ortamında çalışan eğitsel ve teorik bir simülasyondur. 
     Herhangi bir fiziksel donanıma (Arduino, sensör, röle) bağlı değildir. 
     
-    **Geliştirme Amacı:** Elektrik-Elektronik Mühendisliği öğrencilerine ve ilgililerine, transformatörlerde otomatik gerilim regülasyonunun temel mantığını etkileşimli biçimde sunmaktır.
+    **Geliştirme Amacı:** Elektrik-Elektronik Mühendisliği öğrencilerine ve ilgililerine, transformatörlerde otomatik gerilim regülasyonunun temel mantığını, ters güç akışı (GES entegrasyonu) gibi modern şebeke problemlerini etkileşimli biçimde sunmaktır.
     
     **Gereksinimleri Karşılama:**
     Uygulama PEP 8 uyumlu Python kodu ile yazılmış olup Streamlit, Plotly, Pandas ve Numpy kullanılmıştır. Bütün matematiksel modeller, Unit Testler (pytest) ile doğrulanmış deterministik bir yapıdadır.

@@ -64,3 +64,28 @@ def generate_load_scenario(
         return np.clip(base_pu + noise, 0.0, 1.5)
     else:
         return np.ones_like(time_array) * base_pu
+
+def generate_solar_scenario(
+    scenario_type: str, 
+    time_array: np.ndarray, 
+    peak_pu: float = 0.5
+) -> np.ndarray:
+    if scenario_type == "Yok":
+        return np.zeros_like(time_array)
+    elif scenario_type == "Bulutsuz Yaz Günü":
+        t_normalized = time_array / time_array[-1] * 24.0
+        solar = np.zeros_like(t_normalized)
+        mask = (t_normalized > 6) & (t_normalized < 18)
+        solar[mask] = peak_pu * np.sin((t_normalized[mask] - 6) * np.pi / 12)
+        return solar
+    elif scenario_type == "Parçalı Bulutlu":
+        t_normalized = time_array / time_array[-1] * 24.0
+        solar = np.zeros_like(t_normalized)
+        mask = (t_normalized > 6) & (t_normalized < 18)
+        base_solar = peak_pu * np.sin((t_normalized[mask] - 6) * np.pi / 12)
+        np.random.seed(42)
+        noise = np.random.uniform(0.4, 1.0, size=len(base_solar))
+        solar[mask] = base_solar * noise
+        return solar
+    else:
+        return np.zeros_like(time_array)
