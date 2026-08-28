@@ -44,6 +44,9 @@ solar_peak = st.sidebar.number_input("GES Kurulu Gücü (pu)", value=0.8, min_va
 st.sidebar.header("İşletme Modu")
 parallel_mode = st.sidebar.selectbox("Çalışma Modu", ["Tek Trafo", "Bağımsız Paralel", "Lider-Takipçi Paralel"], index=0)
 
+st.sidebar.header("Ekonomik Analiz")
+cost_per_tap = st.sidebar.number_input("Kademe Değişim Maliyeti ($)", value=0.50, format="%.2f", step=0.1)
+
 st.sidebar.header("Simülasyon Ayarları")
 sim_time = st.sidebar.number_input("Simülasyon Süresi (s)", value=60.0)
 dt_s = st.sidebar.number_input("Zaman Adımı (s)", value=0.1)
@@ -59,11 +62,12 @@ df_results, df_events, events = run_simulation(
     t_params, c_params, sim_time, dt_s, v_scenario, l_scenario, solar_scenario, solar_peak, pf, is_inductive, parallel_mode
 )
 
-kpis = calculate_kpis(df_results, target_v, deadband)
+kpis = calculate_kpis(df_results, target_v, deadband, cost_per_tap)
 params_dict = {
     "transformer": t_params.__dict__,
     "controller": c_params.__dict__,
-    "scenario": {"v_scenario": v_scenario, "l_scenario": l_scenario, "solar_scenario": solar_scenario, "pf": pf, "is_inductive": is_inductive, "parallel_mode": parallel_mode}
+    "scenario": {"v_scenario": v_scenario, "l_scenario": l_scenario, "solar_scenario": solar_scenario, "pf": pf, "is_inductive": is_inductive, "parallel_mode": parallel_mode},
+    "economics": {"cost_per_tap": cost_per_tap}
 }
 
 df = df_results
@@ -74,15 +78,16 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["Simülasyon", "Sonuçların Karşılaş
 with tab1:
     st.subheader("Performans Ölçütleri (KPI)")
     if p_mode == "Tek Trafo":
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4, c_econ = st.columns(5)
     else:
-        c1, c2, c3, c4, c5 = st.columns(5)
+        c1, c2, c3, c4, c5, c_econ = st.columns(6)
         c5.metric("Maks. Sirkülasyon Akımı", f"{kpis['max_i_circ']:.3f} pu")
         
     c1.metric("Regülasyon İyileşmesi", f"% {kpis['improvement_percent']:.1f}")
     c2.metric("Toplam Kademe Hareketi", str(kpis['total_tap_changes']))
     c3.metric("Ölü Bant Dışında Süre", f"{kpis['time_out_of_deadband']:.1f} s")
     c4.metric("Min/Maks Çıkış (pu)", f"{kpis['min_v_out']:.3f} / {kpis['max_v_out']:.3f}")
+    c_econ.metric("Mekanik Aşınma Maliyeti", f"${kpis['total_wear_cost']:.2f}", delta=f"{kpis['total_tap_changes']} hareket", delta_color="inverse")
     
     st.write("---")
     
