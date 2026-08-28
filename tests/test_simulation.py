@@ -16,6 +16,8 @@ def test_simulation_controlled_better_than_uncontrolled():
         dt_s=0.1,
         v_in_scenario_type="Basamak",
         load_scenario_type="Sabit",
+        solar_scenario_type="Yok",
+        solar_peak_pu=0.0,
         power_factor=0.9,
         is_inductive=True
     )

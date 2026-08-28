@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def calculate_kpis(df: pd.DataFrame, target_pu: float, deadband_percent: float):
+def calculate_kpis(df: pd.DataFrame, target_pu: float, deadband_percent: float, cost_per_tap: float = 0.5):
     uncontrolled_max_dev = df["Kontrolsüz Hata"].abs().max()
     controlled_max_dev = df["Kontrollü Hata"].abs().max()
     
@@ -15,6 +15,7 @@ def calculate_kpis(df: pd.DataFrame, target_pu: float, deadband_percent: float):
     tap_diff1 = df["Kademe 1"].diff().fillna(0)
     tap_diff2 = df["Kademe 2"].diff().fillna(0)
     total_tap_changes = (tap_diff1 != 0).sum() + (tap_diff2 != 0).sum()
+    total_wear_cost = total_tap_changes * cost_per_tap
     
     dt = df["Zaman (s)"].diff().mean()
     if np.isnan(dt): dt = 0
@@ -34,6 +35,7 @@ def calculate_kpis(df: pd.DataFrame, target_pu: float, deadband_percent: float):
         "controlled_mae": float(controlled_mae),
         "improvement_percent": float(improvement_percent),
         "total_tap_changes": int(total_tap_changes),
+        "total_wear_cost": float(total_wear_cost),
         "time_out_of_deadband": float(time_out_of_deadband),
         "min_v_out": float(min_v_out),
         "max_v_out": float(max_v_out),
