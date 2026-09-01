@@ -33,7 +33,7 @@ min_time_taps = st.sidebar.number_input("Minimum Bekleme Süresi (s)", value=1.0
 
 st.sidebar.header("Senaryo Ayarları")
 v_scenario = st.sidebar.selectbox("Giriş Gerilimi Senaryosu", ["Sabit", "Basamak", "Rampa", "Sinüzoidal", "Rastgele"], index=1)
-l_scenario = st.sidebar.selectbox("Yük Senaryosu", ["Sabit", "Basamak", "Rampa", "TEİAŞ Günlük (Ölçekli)", "Rastgele"], index=3)
+l_scenario = st.sidebar.selectbox("Yük Senaryosu", ["Sabit", "Basamak", "Rampa", "TEİAŞ Günlük (Ölçekli)", "TEİAŞ + EV Şarj Şoku", "Rastgele"], index=3)
 pf = st.sidebar.number_input("Güç Faktörü", value=0.90, min_value=0.0, max_value=1.0)
 is_ind_str = st.sidebar.radio("Yük Tipi", ["Endüktif", "Kapasitif"])
 is_inductive = (is_ind_str == "Endüktif")
@@ -182,6 +182,8 @@ with tab4:
     **Akıllı (Ters Zamanlı & EMA) Denetleyici:** Geleneksel röleler anlık gürültülerden çok etkilenir ve "vites kararsızlığı" (hunting) yaşar. Akıllı mod ise iki devrimsel yöntem kullanır:
     1. **EMA (Üstel Hareketli Ortalama) Filtresi:** Motor kalkışı gibi anlık voltaj çöküntülerini (transient) görmezden gelir.
     2. **Ters Zamanlı (IDMT) Gecikme:** Eğer voltaj sadece biraz düşmüşse bekler (sabit delay). Ama eğer voltaj ÇOK tehlikeli seviyede düşmüşse, bekleme süresini matematiksel olarak anında kısaltarak acil müdahale eder. Bu yöntem hem trafoyu korur hem de bakım maliyetini devasa oranda düşürür.
+    
+    **Elektrikli Araç (EV) Şarj Şoku:** Geleceğin şebekelerindeki en büyük güncel problemlerden biridir. İnsanlar akşam işten eve döndüğünde aynı anda elektrikli araçlarını şarja takarlar. Bu, şebekede "akşam saatlerinde" aniden devasa bir yük yığılmasına sebep olur ve voltajı tehlikeli seviyelere çeker. Akıllı denetleyiciler bu ani ve derin çöküşleri yönetmek için kritik öneme sahiptir.
     
     **Paralel Transformatörler ve Sirkülasyon Akımı:** İki veya daha fazla transformatör paralel bağlandığında, kademe konumları farklı olursa aralarında bir gerilim farkı oluşur. Bu fark, şebekeye veya yüke akmak yerine iki trafo arasında dönüp duran ve ısınmaya sebep olan bir "sirkülasyon akımı" (circulating current) yaratır. Master-Follower (Lider-Takipçi) kontrol modu, kademeleri senkronize ederek bunu önler. Bağımsız kontrol modunda ise tepki sürelerindeki ufak farklar bile bu akımın oluşmasına yol açar.
     
