@@ -58,6 +58,19 @@ def generate_load_scenario(
         yp = [0.4, 0.5, 0.85, 0.85, 1.1, 0.4]
         l = np.interp(t_normalized, xp, yp) * (base_pu / 0.85)
         return l
+    elif scenario_type == "TEİAŞ + EV Şarj Şoku":
+        t_normalized = time_array / time_array[-1] * 24.0
+        xp = [0, 6, 9, 17, 20, 24]
+        yp = [0.4, 0.5, 0.85, 0.85, 1.1, 0.4]
+        base_load = np.interp(t_normalized, xp, yp) * (base_pu / 0.85)
+        
+        # Akşam 18:30 ile 22:30 arası EV şarj şoku
+        ev_load = np.zeros_like(t_normalized)
+        ev_mask = (t_normalized >= 18.5) & (t_normalized <= 22.5)
+        # Çan eğrisi şeklinde büyük bir şarj yığılması
+        ev_load[ev_mask] = 0.5 * np.sin((t_normalized[ev_mask] - 18.5) * np.pi / 4.0)
+        
+        return base_load + ev_load
     elif scenario_type == "Rastgele":
         np.random.seed(seed + 1)
         noise = np.random.normal(0, 0.05, len(time_array))
