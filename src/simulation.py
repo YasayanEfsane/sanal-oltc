@@ -40,7 +40,8 @@ def run_simulation(
     c2_params = ControllerParams(
         deadband_percent=controller_params.deadband_percent,
         delay_time_s=controller_params.delay_time_s + 0.1,
-        min_time_between_taps_s=controller_params.min_time_between_taps_s
+        min_time_between_taps_s=controller_params.min_time_between_taps_s,
+        controller_type=controller_params.controller_type
     )
     controller2 = TapController(
         c2_params, 

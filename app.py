@@ -26,6 +26,7 @@ tap_max = st.sidebar.number_input("Maksimum Kademe", value=8, step=1)
 tap_step = st.sidebar.number_input("Kademe Adımı (pu)", value=0.0125, format="%.4f")
 
 st.sidebar.header("Denetleyici Parametreleri")
+controller_type = st.sidebar.selectbox("Denetleyici Algoritması", ["Geleneksel (Sabit Zamanlı)", "Akıllı (EMA & Ters Zamanlı)"], index=0)
 deadband = st.sidebar.number_input("Ölü Bant (±%)", value=1.5, format="%.2f")
 delay_time = st.sidebar.number_input("Zaman Gecikmesi (s)", value=2.0)
 min_time_taps = st.sidebar.number_input("Minimum Bekleme Süresi (s)", value=1.0)
@@ -56,7 +57,12 @@ t_params = TransformerParams(
     frequency_Hz=freq, r_pu=r_pu, x_pu=x_pu, target_voltage_pu=target_v,
     tap_min=tap_min, tap_max=tap_max, tap_step_pu=tap_step
 )
-c_params = ControllerParams(deadband_percent=deadband, delay_time_s=delay_time, min_time_between_taps_s=min_time_taps)
+c_params = ControllerParams(
+    deadband_percent=deadband, 
+    delay_time_s=delay_time, 
+    min_time_between_taps_s=min_time_taps, 
+    controller_type=controller_type
+)
 
 df_results, df_events, events = run_simulation(
     t_params, c_params, sim_time, dt_s, v_scenario, l_scenario, solar_scenario, solar_peak, pf, is_inductive, parallel_mode
@@ -172,6 +178,10 @@ with tab4:
     **Transformatör Dönüş Oranı & Kademe Değiştirme:** Transformatörün primer ve sekonder sargı sayılarının oranı, gerilim dönüştürme oranını belirler. Kademe (tap) değiştirici, sargı sayısını mekanik/elektriksel olarak değiştirerek dönüş oranını ayarlar. Pozitif kademe, sekonder gerilimini yükseltir.
     
     **Güneş Enerjisi Santrali (GES) ve Ters Güç Akışı (Reverse Power Flow):** Geleneksel şebekelerde güç daima trafodan yüklere doğru akar (gerilim düşer). Ancak sisteme dağıtık üretim (GES) eklendiğinde, öğle saatlerinde üretim tüketimi aşabilir. Bu durumda güç, şebekeye geri basılır (Ters Güç Akışı) ve gerilim *yükselmeye* başlar. OLTC, bu yükselmeyi önlemek için kademeyi düşürmek zorunda kalır. Klasik röleler bunu yönetmekte zorlanırken, modern çift-yönlü akış algılayan akıllı denetleyiciler (Smart Grid) bu simülasyondaki gibi hatasız çalışır.
+    
+    **Akıllı (Ters Zamanlı & EMA) Denetleyici:** Geleneksel röleler anlık gürültülerden çok etkilenir ve "vites kararsızlığı" (hunting) yaşar. Akıllı mod ise iki devrimsel yöntem kullanır:
+    1. **EMA (Üstel Hareketli Ortalama) Filtresi:** Motor kalkışı gibi anlık voltaj çöküntülerini (transient) görmezden gelir.
+    2. **Ters Zamanlı (IDMT) Gecikme:** Eğer voltaj sadece biraz düşmüşse bekler (sabit delay). Ama eğer voltaj ÇOK tehlikeli seviyede düşmüşse, bekleme süresini matematiksel olarak anında kısaltarak acil müdahale eder. Bu yöntem hem trafoyu korur hem de bakım maliyetini devasa oranda düşürür.
     
     **Paralel Transformatörler ve Sirkülasyon Akımı:** İki veya daha fazla transformatör paralel bağlandığında, kademe konumları farklı olursa aralarında bir gerilim farkı oluşur. Bu fark, şebekeye veya yüke akmak yerine iki trafo arasında dönüp duran ve ısınmaya sebep olan bir "sirkülasyon akımı" (circulating current) yaratır. Master-Follower (Lider-Takipçi) kontrol modu, kademeleri senkronize ederek bunu önler. Bağımsız kontrol modunda ise tepki sürelerindeki ufak farklar bile bu akımın oluşmasına yol açar.
     
